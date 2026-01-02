@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import argparse
 
-from .db import load_cities_de, to_coords, DEFAULT_URL
-from .weights import pick_top_n_cities
+from .db import DEFAULT_URL, load_cities_de, to_coords
 from .solver import solve_tsp_gurobi
 from .visualizer import build_map, save_map
+from .weights import pick_top_n_cities
 
 
 def parse_args() -> argparse.Namespace:
@@ -19,7 +19,6 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--out", type=str, default="tsp_map.html")
     p.add_argument("--time-limit", type=float, default=None)
-    p.add_argument("--quiet", action="store_true")
     return p.parse_args()
 
 
@@ -33,14 +32,10 @@ def main() -> None:
 
     coords = to_coords(chosen)
 
-    tour, obj = solve_tsp_gurobi(coords, time_limit_s=args.time_limit)
+    tour = solve_tsp_gurobi(coords, time_limit_s=args.time_limit)
 
     m = build_map(tour, coords)
     save_map(m, args.out)
-
-    if not args.quiet:
-        print(f"Tour length objective: {obj}")
-        print(f"Wrote map: {args.out}")
 
 
 if __name__ == "__main__":

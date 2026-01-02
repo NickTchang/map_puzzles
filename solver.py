@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from itertools import combinations
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import gurobipy as gp
 from gurobipy import GRB
@@ -55,7 +55,7 @@ def _edges_to_ordered_tour(
 def solve_tsp_gurobi(
     coords: Coords,
     time_limit_s: Optional[float] = None,
-) -> Tuple[Tour, float]:
+) -> Tour:
     cities = list(coords.keys())
     dist_undirected = _build_distances(cities, coords)
 
@@ -113,4 +113,4 @@ def solve_tsp_gurobi(
     ]
 
     tour = _edges_to_ordered_tour(cities, selected_undirected)
-    return tour, float(m.ObjVal)
+    return tour

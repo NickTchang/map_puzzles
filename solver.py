@@ -73,30 +73,32 @@ def solve_tsp_gurobi(
 
     def _subtour(edges: gp.tuplelist) -> List[str]:
         unvisited = cities[:]
-        shortest = cities[:]  # replaced
-        while unvisited:
-            cycle = []
+        cycle = cities[:]  # Dummy - guaranteed to be replaced
+        while unvisited:  # true if list is non-empty
+            thiscycle = []
             neighbors = unvisited
             while neighbors:
                 current = neighbors[0]
-                cycle.append(current)
+                thiscycle.append(current)
                 unvisited.remove(current)
                 neighbors = [j for _, j in edges.select(current, "*") if j in unvisited]
-            if len(cycle) < len(shortest):
-                shortest = cycle
-        return shortest
+            if len(thiscycle) <= len(cycle):
+                cycle = thiscycle  # New shortest subtour
+        return cycle
 
     def _subtourelim(model: gp.Model, where: int) -> None:
         if where == GRB.Callback.MIPSOL:
-            vals = model.cbGetSolution(model._x)
+            # make a list of edges selected in the solution
+            vals = model.cbGetSolution(model._vars)
             selected = gp.tuplelist(
-                (i, j) for i, j in model._x.keys() if vals[i, j] > 0.5
+                (i, j) for i, j in model._vars.keys() if vals[i, j] > 0.5
             )
-
+            # find the shortest cycle in the selected edge list
             tour = _subtour(selected)
             if len(tour) < len(cities):
+                # add subtour elimination constr. for every pair of cities in subtour
                 model.cbLazy(
-                    gp.quicksum(model._x[i, j] for i, j in combinations(tour, 2))
+                    gp.quicksum(model._vars[i, j] for i, j in combinations(tour, 2))
                     <= len(tour) - 1
                 )
 

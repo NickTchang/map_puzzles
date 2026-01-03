@@ -59,17 +59,20 @@ def solve_tsp_gurobi(
     cities = list(coords.keys())
     dist_undirected = _build_distances(cities, coords)
 
-    m = gp.Model("tsp")
-    m.Params.LazyConstraints = 1
+    m = gp.Model()
+
     if time_limit_s is not None:
         m.Params.TimeLimit = float(time_limit_s)
-
-    x = m.addVars(
+    # Variables: is city 'i' adjacent to city 'j' on the tour?
+    vars = m.addVars(
         dist_undirected.keys(), obj=dist_undirected, vtype=GRB.BINARY, name="x"
     )
-    x.update({(j, i): x[i, j] for (i, j) in dist_undirected.keys()})
 
-    m.addConstrs((x.sum(c, "*") == 2 for c in cities), name="deg2")
+    # Symmetric direction: use dict.update to alias variable with new key
+    vars.update({(j, i): vars[i, j] for i, j in vars.keys()})
+
+    # Constraints: two edges incident to each city
+    m.addConstrs(vars.sum(c, "*") == 2 for c in cities)
 
     def _subtour(edges: gp.tuplelist) -> List[str]:
         unvisited = cities[:]
@@ -102,17 +105,12 @@ def solve_tsp_gurobi(
                     <= len(tour) - 1
                 )
 
-    m._x = x
-
+    m._vars = vars
+    m.Params.LazyConstraints = 1
     m.optimize(_subtourelim)
 
-    if m.Status not in (GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL):
-        raise RuntimeError(f"Gurobi ended with status {m.Status}.")
+    vals = m.getAttr("x", vars)
+    selected = gp.tuplelist((i, j) for (i, j) in vals.keys() if vals[i, j] > 0.5)
 
-    vals = m.getAttr("x", x)
-    selected_undirected = [
-        (i, j) for (i, j) in dist_undirected.keys() if vals[i, j] > 0.5
-    ]
-
-    tour = _edges_to_ordered_tour(cities, selected_undirected)
+    tour = _subtour(selected)
     return tour

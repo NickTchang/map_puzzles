@@ -63,6 +63,7 @@ def solve_tsp_gurobi(
 
     if time_limit_s is not None:
         m.Params.TimeLimit = float(time_limit_s)
+
     # Variables: is city 'i' adjacent to city 'j' on the tour?
     vars = m.addVars(
         dist_undirected.keys(), obj=dist_undirected, vtype=GRB.BINARY, name="x"
@@ -110,7 +111,7 @@ def solve_tsp_gurobi(
     m.optimize(_subtourelim)
 
     vals = m.getAttr("x", vars)
-    selected = gp.tuplelist((i, j) for (i, j) in vals.keys() if vals[i, j] > 0.5)
+    selected_undirected = [(i, j) for (i, j) in vals.keys() if vals[i, j] > 0.5 ]
 
-    tour = _subtour(selected)
+    tour = _edges_to_ordered_tour(cities, selected_undirected)
     return tour

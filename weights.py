@@ -20,6 +20,7 @@ def pick_top_n_cities(
     weights: Weights,
     scorer: Callable[[pd.Series, Weights], float] = score_row,
 ) -> pd.DataFrame:
+
     scored = df.copy()
     scored["score"] = scored.apply(lambda r: scorer(r, weights), axis=1)
     scored = scored.sort_values("score", ascending=False).head(n)

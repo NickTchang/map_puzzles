@@ -29,7 +29,6 @@ def main() -> None:
 
     weights = {"population": 1.0}
     chosen = pick_top_n_cities(df, n=args.n, weights=weights)
-
     coords = to_coords(chosen)
 
     tour = solve_tsp_gurobi(coords, time_limit_s=args.time_limit)

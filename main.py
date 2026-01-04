@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
         "--n",
         type=int,
         default=15,
-        help="number of cities to select before solving TSP",
+        help="number of cities",
     )
     p.add_argument("--out", type=str, default="tsp_map.html")
     p.add_argument("--time-limit", type=float, default=None)

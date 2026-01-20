@@ -1,8 +1,13 @@
 from . import db
 
+
 def load_cities() -> None:
     df = db.load_cities_de()
-    print(df.head(15))
+    print(df)
+
+
+def test_solver() -> None:
+    pass
 
 
 if __name__ == "__main__":

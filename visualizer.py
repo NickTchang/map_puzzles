@@ -1,24 +1,21 @@
 from __future__ import annotations
 
-from typing import Tuple
 import folium
 
 from .custom_types import Coords, Tour
 
 
-def build_map(
+def add_tour(
+    m: folium.Map,
     tour: Tour,
     coords: Coords,
-    center: Tuple[float, float] = (51.1657, 10.4515),
-    zoom_start: int = 4,
     line_color: str = "#fc4103",
+    opacity: float = 1,
 ) -> folium.Map:
-    m = folium.Map(location=[center[0], center[1]], zoom_start=zoom_start)
-
     points = [coords[city] for city in tour]
     points.append(points[0])
 
-    folium.PolyLine(points, color=line_color).add_to(m)
+    folium.PolyLine(points, color=line_color, opacity=opacity).add_to(m)
 
     for lat, lng in points[:-1]:
         folium.CircleMarker(
@@ -27,8 +24,30 @@ def build_map(
             fill=True,
             stroke=False,
             color=line_color,
-            fill_opacity=0.8,
+            fill_opacity=opacity,
         ).add_to(m)
+
+    return m
+
+
+def build_map(
+    tour: Tour,
+    coords: Coords,
+    zoom_start: int = 4,
+) -> folium.Map:
+    center_lat = 0
+    center_lng = 0
+
+    points = [coords[city] for city in tour]
+
+    for lat, lng in points:
+        center_lat += lat
+        center_lng += lng
+
+    center_lat = center_lat / len(tour)
+    center_lng = center_lng / len(tour)
+
+    m = folium.Map(location=[center_lat, center_lng], zoom_start=zoom_start)
 
     return m
 

@@ -8,7 +8,10 @@ import pandas as pd
 from .custom_types import Coords
 
 DEFAULT_URL: Final[str] = "https://simplemaps.com/static/data/country-cities/de/de.csv"
-DEFAULT_GEONAMES_ZIP: Final[Path] = Path(__file__).resolve().parent / "cities500.zip"
+
+DEFAULT_GEONAMES_ZIP: Final[Path] = Path(__file__).resolve().parent / "cities5000.zip"
+# DEFAULT_GEONAMES_ZIP_500: Final[Path] = Path(__file__).resolve().parent / "cities500.zip"
+# DEFAULT_GEONAMES_ZI_1000: Final[Path] = Path(__file__).resolve().parent / "cities1000.zip"
 
 GEONAMES_COLUMNS: Final[list[str]] = [
     "geonameid",

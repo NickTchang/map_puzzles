@@ -9,8 +9,8 @@ import pandas as pd
 from .custom_types import Coords, InstanceProperty, _euclidean_degrees, better
 from .db import to_coords
 from .heuristics import (
-    diff_edges_count,
-    nearest_neighbor_best_of_starts,
+    diff_edges_count_tour_edgeset,
+    nearest_neighbor_graph,
     tour_length,
 )
 from .solver import solve_tsp_gurobi_best_and_second_best
@@ -30,22 +30,20 @@ def evaluate_instance(
     # opt_tour = solve_tsp_gurobi(coords)
     opt_tour, opt_len, _, second_len = solve_tsp_gurobi_best_and_second_best(coords)
 
-    nn_tour = nearest_neighbor_best_of_starts(coords)
+    nn_graph = nearest_neighbor_graph(coords)
 
-    diff_edges = diff_edges_count(opt_tour, nn_tour)
+    diff_edges = diff_edges_count_tour_edgeset(opt_tour, nn_graph)
     pop_sum = _population_sum(instance_df)
 
     opt_len = tour_length(coords, opt_tour)
-    nn_len = tour_length(coords, nn_tour)
 
     return InstanceProperty(
         diff_edges=diff_edges,
         pop_sum=pop_sum,
         opt_tour=opt_tour,
-        nn_tour=nn_tour,
+        nn_graph=nn_graph,
         opt_len=opt_len,
         second_len=second_len,
-        nn_len=nn_len,
     )
 
 

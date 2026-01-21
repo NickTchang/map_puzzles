@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import random
-from typing import Optional, Sequence, Set, Tuple
+from math import inf
+from typing import Optional, Sequence
 
-from .custom_types import Coords, Tour, _euclidean_degrees
+from .custom_types import Coords, Edge_set, Tour, _euclidean_degrees
 
 
 def tour_length(coords: Coords, tour: Sequence[str]) -> float:
@@ -18,13 +19,12 @@ def tour_length(coords: Coords, tour: Sequence[str]) -> float:
     return total
 
 
-def tour_edges_undirected(tour: Sequence[str]) -> Set[Tuple[str, str]]:
+def tour_edges_undirected(tour: Sequence[str]) -> Edge_set:
     """
     undirected edge set for a Hamiltonian cycle.
-    (min,max) makes (a,b) == (b,a).
     """
     n = len(tour)
-    edges: Set[Tuple[str, str]] = set()
+    edges: Edge_set = set()
     for i in range(n):
         a = tour[i]
         b = tour[(i + 1) % n]
@@ -32,13 +32,39 @@ def tour_edges_undirected(tour: Sequence[str]) -> Set[Tuple[str, str]]:
     return edges
 
 
-def diff_edges_count(opt_tour: Sequence[str], heur_tour: Sequence[str]) -> int:
+def diff_edges_count_tours(opt_tour: Sequence[str], heur_tour: Sequence[str]) -> int:
     """
     number of different edges in two tours
     """
     e_opt = tour_edges_undirected(opt_tour)
     e_heur = tour_edges_undirected(heur_tour)
     return len(e_opt - e_heur)
+
+
+def diff_edges_count_tour_edgeset(opt_tour: Sequence[str], heur_graph: Edge_set) -> int:
+    """
+    number of different edges in two tours
+    """
+    e_opt = tour_edges_undirected(opt_tour)
+    return len(e_opt - heur_graph)
+
+
+def nearest_neighbor_graph(coords: Coords) -> Edge_set:
+    nn_graph: Edge_set = set()
+    cities = list(coords.keys())
+    for c in cities:
+        neighbors = cities.copy()
+        neighbors.remove(c)
+        closest_nbr = None
+        closest_nbr_dist = inf
+        for n in neighbors:
+            _dist = _euclidean_degrees(coords[c], coords[n])
+            if _dist < closest_nbr_dist:
+                closest_nbr_dist = _dist
+                closest_nbr = n
+        if closest_nbr is not None:
+            nn_graph.add((c, closest_nbr) if c < closest_nbr else (closest_nbr, c))
+    return nn_graph
 
 
 def nearest_neighbor_tour(coords: Coords, start: str) -> Tour:

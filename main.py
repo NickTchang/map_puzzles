@@ -5,7 +5,11 @@ import time
 from datetime import datetime
 
 from .db import load_cities_de, to_coords
-from .heuristics import diff_edges_count, nearest_neighbor_best_of_starts, tour_length
+from .heuristics import (
+    diff_edges_count_tour_edgeset,
+    nearest_neighbor_graph,
+    tour_length,
+)
 from .instance_search import search_best_instance
 from .solver import solve_tsp_gurobi
 from .visualizer import add_tour, build_map, save_map
@@ -44,12 +48,6 @@ def parse_args() -> argparse.Namespace:
         help="Number of cities",
     )
     p.add_argument(
-        "--nn-starts",
-        type=int,
-        default=20,
-        help="How many different start cities to try for NN, best NN tour is kept",
-    )
-    p.add_argument(
         "--pop-weight",
         type=float,
         default=0.05,
@@ -85,12 +83,11 @@ def main() -> None:
 
     coords = to_coords(chosen)
     opt_tour = solve_tsp_gurobi(coords)
-    nn_tour = nearest_neighbor_best_of_starts(coords)
+    nn_graph = nearest_neighbor_graph(coords)
 
-    diff_edges = diff_edges_count(opt_tour, nn_tour)
+    diff_edges = diff_edges_count_tour_edgeset(opt_tour, nn_graph)
     shared_edges = len(opt_tour) - diff_edges
     opt_len = tour_length(coords, opt_tour)
-    nn_len = tour_length(coords, nn_tour)
 
     pop_sum = float(
         __import__("pandas")
@@ -102,13 +99,13 @@ def main() -> None:
     print(
         f"n={len(opt_tour)}  diff_edges(OPT\\NN)={diff_edges}  shared_edges={shared_edges}"
     )
-    print(f"opt_len={opt_len:.3f}  nn_len={nn_len:.3f}  pop_sum={pop_sum:.0f}")
+    print(f"opt_len={opt_len:.3f}  pop_sum={pop_sum:.0f}")
     # for i in opt_tour:
     #     print(i)
 
     m = build_map(opt_tour, coords)
     # nn tour
-    add_tour(m, nn_tour, coords, line_color="#1f77b4", opacity=0.6)
+    # add_tour(m, nn_graph, coords, line_color="#1f77b4", opacity=0.6)
     # opt tour
     add_tour(m, opt_tour, coords, line_color="#fc4103", opacity=1)
 

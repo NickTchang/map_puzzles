@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 # (lat, lng)
 Coord = Tuple[float, float]
 Coords = Dict[str, Coord]
 Tour = List[str]
+Edge_set = Set[Tuple[str, str]]
 
 
 @dataclass(frozen=True)
@@ -15,10 +16,9 @@ class InstanceProperty:
     diff_edges: int
     pop_sum: float
     opt_tour: Tour
-    nn_tour: Tour
+    nn_graph: Edge_set
     opt_len: float
     second_len: float
-    nn_len: float
 
 
 def better(a: InstanceProperty, b: InstanceProperty) -> bool:

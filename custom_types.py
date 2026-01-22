@@ -32,3 +32,13 @@ def better(a: InstanceProperty, b: InstanceProperty) -> bool:
 
 def _euclidean_degrees(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     return math.hypot(a[0] - b[0], a[1] - b[1])
+
+
+def print_progress(prefix: str, curr: int, end: int) -> None:
+    if curr == end:
+        print(prefix + str(curr) + " Complete!")
+
+    LINE_UP = "\033[1A"
+    LINE_CLEAR = "\x1b[2K"
+    print(prefix + str(curr) + " out of " + str(end))
+    print(LINE_UP, end=LINE_CLEAR)

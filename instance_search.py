@@ -6,7 +6,13 @@ from typing import Dict, Tuple
 
 import pandas as pd
 
-from .custom_types import Coords, InstanceProperty, _euclidean_degrees, better
+from .custom_types import (
+    Coords,
+    InstanceProperty,
+    _euclidean_degrees,
+    better,
+    print_progress,
+)
 from .db import to_coords
 from .heuristics import (
     diff_edges_count_tour_edgeset,
@@ -178,4 +184,6 @@ def search_best_instance(
                 best_df = current_df.copy()
                 best_property = current_property
 
+        # print progress:
+        print_progress("Simulated annealing interations: ", k, iters)
     return best_df, best_property

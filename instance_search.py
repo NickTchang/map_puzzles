@@ -4,7 +4,9 @@ import math
 import random
 from typing import Dict, Tuple
 
+import numpy as np
 import pandas as pd
+from scipy.spatial import ConvexHull
 
 from .custom_types import (
     Coords,
@@ -25,7 +27,9 @@ from .solver import solve_tsp_gurobi_best_and_second_best
 def _population_sum(df: pd.DataFrame) -> float:
     if "population" not in df.columns:
         return 0.0
-    return float(pd.to_numeric(df["population"], errors="coerce").fillna(0).sum())
+    return float(
+        pd.to_numeric(df["population"], errors="coerce").fillna(0).pow(2).sum()
+    )
 
 
 def evaluate_instance(
@@ -43,13 +47,22 @@ def evaluate_instance(
 
     opt_len = tour_length(coords, opt_tour)
 
+    _city_names = list(coords.keys())
+    _coords = np.array([coords[name] for name in _city_names])
+
+    hull = ConvexHull(_coords)
+
+    hull_names = [_city_names[i] for i in hull.vertices]
+
     return InstanceProperty(
+        coords=coords,
         diff_edges=diff_edges,
         pop_sum=pop_sum,
         opt_tour=opt_tour,
         nn_graph=nn_graph,
         opt_len=opt_len,
         second_len=second_len,
+        convex_hull=hull_names,
     )
 
 
@@ -86,7 +99,13 @@ def search_best_instance(
     def scalar_score(ip: InstanceProperty) -> float:
         pop_norm = ip.pop_sum / pop_ref
         tour_diff_factor = ip.second_len / ip.opt_len
-        return float(ip.diff_edges) + (pop_weight * pop_norm) + tour_diff_factor
+        convex_hull_ratio = 1 - (len(ip.convex_hull) / len(ip.coords))
+        return (
+            float(ip.diff_edges)
+            + (pop_weight * pop_norm)
+            + tour_diff_factor
+            + convex_hull_ratio
+        )
 
     if n <= 2:
         raise ValueError("n must be >= 3 for a tour")

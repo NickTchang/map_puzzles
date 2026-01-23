@@ -13,12 +13,14 @@ Edge_set = Set[Tuple[str, str]]
 
 @dataclass(frozen=True)
 class InstanceProperty:
+    coords: Coords
     diff_edges: int
     pop_sum: float
     opt_tour: Tour
     nn_graph: Edge_set
     opt_len: float
     second_len: float
+    convex_hull: Tour
 
 
 def better(a: InstanceProperty, b: InstanceProperty) -> bool:

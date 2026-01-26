@@ -12,7 +12,7 @@ from .heuristics import (
 )
 from .instance_search import search_best_instance
 from .solver import solve_tsp_gurobi
-from .visualizer import add_tour, build_map, save_map
+from .visualizer import add_SA_process, add_tour, build_map, save_map
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,6 +62,12 @@ def parse_args() -> argparse.Namespace:
         default="tsp_map.csv",
         help="csv file name as CSV(cities/coords/population) ",
     )
+    p.add_argument(
+        "--record",
+        action="store_true",
+        default=False,
+        help="Display each of the simulated annealing step",
+    )
     return p.parse_args()
 
 
@@ -70,6 +76,7 @@ def main() -> None:
 
     df = load_cities_de()
 
+    frames = []
     chosen, _ = search_best_instance(
         df,
         n=args.n,
@@ -79,6 +86,7 @@ def main() -> None:
         min_diff_edges=args.min_diff_edges,
         seed=args.seed,
         pop_weight=args.pop_weight,
+        frames=frames,
     )
 
     coords = to_coords(chosen)
@@ -104,10 +112,13 @@ def main() -> None:
     #     print(i)
 
     m = build_map(opt_tour, coords)
-    # nn tour
-    # add_tour(m, nn_graph, coords, line_color="#1f77b4", opacity=0.6)
-    # opt tour
-    add_tour(m, opt_tour, coords, line_color="#fc4103", opacity=1)
+    if args.record:
+        add_SA_process(m, frames, 1)
+    else:
+        # nn tour
+        # add_tour(m, nn_graph, coords, line_color="#1f77b4", opacity=0.6)
+        # opt tour
+        add_tour(m, opt_tour, coords, line_color="#fc4103", opacity=1)
 
     # save all the stuff
     current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

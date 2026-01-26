@@ -76,6 +76,7 @@ def search_best_instance(
     min_diff_edges: int = 0,
     pop_weight: float = 0.05,
     seed: int = 0,
+    frames=[],
 ) -> Tuple[pd.DataFrame, InstanceProperty]:
     """
     simulated annealing over a candidate pool by swapping cities
@@ -147,7 +148,6 @@ def search_best_instance(
     pool_cities = pool["city"].tolist()
     pool_indexed = pool.set_index("city", drop=False)
 
-    # Temperature schedule
     T0 = 1.0
     T1 = 0.01
 
@@ -198,6 +198,12 @@ def search_best_instance(
             current_df = proposal
             current_property = candidate_property
             current_set = candidate_set
+
+            if True:
+                tour = current_property.opt_tour
+                coords = current_property.coords
+                pts = [list(coords[c]) for c in tour] + [list(coords[tour[0]])]
+                frames.append(pts)
 
             if better(current_property, best_property):
                 best_df = current_df.copy()

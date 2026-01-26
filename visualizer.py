@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 import folium
+from folium.plugins import TimestampedGeoJson
 
 from .custom_types import Coords, Tour
 
@@ -54,3 +57,38 @@ def build_map(
 
 def save_map(m: folium.Map, path: str) -> None:
     m.save(path)
+
+
+def add_SA_process(m, frames, keep_every=1):
+    frames = frames[::keep_every]  
+    if not frames:
+        raise ValueError("frames is empty")
+
+    t0 = datetime(2020, 1, 1)  
+    features = []
+
+    for i, pts_latlng in enumerate(frames):
+        coords_lonlat = [[lng, lat] for lat, lng in pts_latlng]
+        t = (t0 + timedelta(seconds=i)).isoformat()
+
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": coords_lonlat},
+                "properties": {
+                    "times": [t] * len(coords_lonlat),
+                    "style": {"weight": 3, "color": "red"},
+                },
+            }
+        )
+
+    TimestampedGeoJson(
+        {"type": "FeatureCollection", "features": features},
+        period="PT1S",
+        duration="PT0S",
+        add_last_point=False,
+        auto_play=False,
+        loop=False,
+        time_slider_drag_update=True,
+    ).add_to(m)
+    return m

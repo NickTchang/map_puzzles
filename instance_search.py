@@ -11,6 +11,7 @@ from scipy.spatial import ConvexHull
 from .custom_types import (
     Coords,
     InstanceProperty,
+    _euclidean_degrees,
     better,
     print_progress,
 )
@@ -111,7 +112,7 @@ def search_best_instance(
             + (pop_weight * pop_norm)
             + (opt_diff_weight * opt_diff)
             + (convex_hull_weight * convex_hull_ratio)
-        ) * min(1.0, max(0.0, ip.min_dist / min_dist))
+        )  # * min(1.0, max(0.0, ip.min_dist / min_dist))
 
     if n <= 2:
         raise ValueError("n must be >= 3 for a tour")
@@ -161,18 +162,18 @@ def search_best_instance(
         T = T0 * ((T1 / T0) ** t)
 
         out_city = rng.choice(tuple(current_set))
-        # others = current_set - {out_city}
-        # valid_choices = list(set(pool_cities) - current_set)
-        # valid_choices = [
-        #     c
-        #     for c in valid_choices
-        #     if min(_euclidean_degrees(pool_coords[c], pool_coords[o]) for o in others)
-        #     >= min_dist
-        # ]
-        #
-        # if not valid_choices:
-        #     continue
-        in_city = rng.choice(tuple(set(pool_cities) - current_set))
+        others = current_set - {out_city}
+        valid_choices = list(set(pool_cities) - current_set)
+        valid_choices = [
+            c
+            for c in valid_choices
+            if min(_euclidean_degrees(pool_coords[c], pool_coords[o]) for o in others)
+            >= min_dist
+        ]
+
+        if not valid_choices:
+            continue
+        in_city = rng.choice(valid_choices)
 
         candidate_set = set(current_set)
         candidate_set.remove(out_city)

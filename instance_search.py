@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,6 @@ from scipy.spatial import ConvexHull
 from .custom_types import (
     Coords,
     InstanceProperty,
-    _euclidean_degrees,
     better,
     print_progress,
 )
@@ -40,7 +39,7 @@ def evaluate_instance(
     # opt_tour = solve_tsp_gurobi(coords)
     opt_tour, opt_len, _, second_len = solve_tsp_gurobi_best_and_second_best(coords)
 
-    nn_graph = nearest_neighbor_graph(coords)
+    nn_graph, min_dist = nearest_neighbor_graph(coords)
 
     diff_edges = diff_edges_count_tour_edgeset(opt_tour, nn_graph)
     pop_sum = _population_sum(instance_df)
@@ -55,6 +54,7 @@ def evaluate_instance(
     hull_names = [_city_names[i] for i in hull.vertices]
 
     return InstanceProperty(
+        min_dist=min_dist,
         coords=coords,
         diff_edges=diff_edges,
         pop_sum=pop_sum,
@@ -74,9 +74,13 @@ def search_best_instance(
     pool_size: int = 250,
     iters: int = 1500,
     min_diff_edges: int = 0,
-    pop_weight: float = 0.05,
+    pop_weight: float = 1.0,
+    nn_diff_weight: float = 1.0,
+    opt_diff_weight: float = 1.0,
+    convex_hull_weight: float = 1.0,
     seed: int = 0,
-    frames=[],
+    record: bool = False,
+    frames: List = [],
 ) -> Tuple[pd.DataFrame, InstanceProperty]:
     """
     simulated annealing over a candidate pool by swapping cities
@@ -99,14 +103,15 @@ def search_best_instance(
 
     def scalar_score(ip: InstanceProperty) -> float:
         pop_norm = ip.pop_sum / pop_ref
-        tour_diff_factor = ip.second_len / ip.opt_len
+        opt_diff = ip.second_len / ip.opt_len
         convex_hull_ratio = 1 - (len(ip.convex_hull) / len(ip.coords))
+        diff_edge_ratio = ip.diff_edges / len(ip.opt_tour)
         return (
-            float(ip.diff_edges)
+            (nn_diff_weight * diff_edge_ratio)
             + (pop_weight * pop_norm)
-            + tour_diff_factor
-            + convex_hull_ratio
-        )
+            + (opt_diff_weight * opt_diff)
+            + (convex_hull_weight * convex_hull_ratio)
+        ) * min(1.0, max(0.0, ip.min_dist / min_dist))
 
     if n <= 2:
         raise ValueError("n must be >= 3 for a tour")
@@ -156,18 +161,18 @@ def search_best_instance(
         T = T0 * ((T1 / T0) ** t)
 
         out_city = rng.choice(tuple(current_set))
-        others = current_set - {out_city}
-        valid_choices = list(set(pool_cities) - current_set)
-        valid_choices = [
-            c
-            for c in valid_choices
-            if min(_euclidean_degrees(pool_coords[c], pool_coords[o]) for o in others)
-            >= min_dist
-        ]
-
-        if not valid_choices:
-            continue
-        in_city = rng.choice(valid_choices)
+        # others = current_set - {out_city}
+        # valid_choices = list(set(pool_cities) - current_set)
+        # valid_choices = [
+        #     c
+        #     for c in valid_choices
+        #     if min(_euclidean_degrees(pool_coords[c], pool_coords[o]) for o in others)
+        #     >= min_dist
+        # ]
+        #
+        # if not valid_choices:
+        #     continue
+        in_city = rng.choice(tuple(set(pool_cities) - current_set))
 
         candidate_set = set(current_set)
         candidate_set.remove(out_city)
@@ -199,7 +204,7 @@ def search_best_instance(
             current_property = candidate_property
             current_set = candidate_set
 
-            if True:
+            if record:
                 tour = current_property.opt_tour
                 coords = current_property.coords
                 pts = [list(coords[c]) for c in tour] + [list(coords[tour[0]])]

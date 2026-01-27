@@ -36,6 +36,26 @@ GEONAMES_COLUMNS: Final[list[str]] = [
 ]
 
 
+def load_cities_all(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
+    path = Path(path)
+
+    df = pd.read_csv(
+        path,
+        sep="\t",
+        header=None,
+        names=GEONAMES_COLUMNS,
+        compression="zip",
+        dtype=str,
+        encoding="utf-8",
+        low_memory=False,
+    )
+    df["population"] = pd.to_numeric(
+        df["population"].astype(str).str.strip(), errors="coerce"
+    ).fillna(0)
+
+    return df.reset_index(drop=True)
+
+
 def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
     """
     Load all german cities
@@ -60,7 +80,10 @@ def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
 
     # filter for germany
     df = df.loc[
-        df["country_code"] == "DE", ["name", "latitude", "longitude", "population"]
+        (df["country_code"] == "DE")
+        & (df["feature_class"] == "P")
+        & (df["feature_code"] != "PPLX"),
+        ["name", "latitude", "longitude", "population"],
     ].copy()
 
     df = df.rename(
@@ -87,26 +110,6 @@ def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
     df = df.sort_values("population", ascending=False).drop_duplicates(subset=["city"])
 
     return df.reset_index(drop=True)
-
-
-# def load_cities_de(url: str = DEFAULT_URL) -> pd.DataFrame:
-#     df = pd.read_csv(url, usecols=["city", "lat", "lng", "population"], dtype=str)
-#
-#     df["lat"] = df["lat"].astype(str).str.strip().str.replace(",", ".", regex=False)
-#     df["lng"] = df["lng"].astype(str).str.strip().str.replace(",", ".", regex=False)
-#
-#     df["lat"] = pd.to_numeric(df["lat"], errors="coerce")
-#     df["lng"] = pd.to_numeric(df["lng"], errors="coerce")
-#
-#     df = df.dropna(subset=["lat", "lng"])
-#
-#     df["population"] = pd.to_numeric(df["population"], errors="coerce").fillna(0)
-#
-#     df["city"] = df["city"].astype(str).str.strip()
-#
-#     df = df.loc[df["city"] != ""].copy()
-#
-#     return df
 
 
 def to_coords(df: pd.DataFrame) -> Coords:

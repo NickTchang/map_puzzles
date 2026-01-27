@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import folium
 from folium.plugins import TimestampedGeoJson
 
-from .custom_types import Coords, Tour
+from .custom_types import Coords, Edge_set, Tour
 
 
 def add_tour(
@@ -28,6 +28,22 @@ def add_tour(
             stroke=False,
             color=line_color,
             fill_opacity=opacity,
+        ).add_to(m)
+
+    return m
+
+
+def add_edges(
+    m: folium.Map,
+    edges: Edge_set,
+    coords: Coords,
+    line_color: str = "#1f77b4",
+    opacity: float = 0.6,
+) -> folium.Map:
+    edges_tuple = tuple(edges)
+    for a, b in edges_tuple:
+        folium.PolyLine(
+            [coords[a], coords[b]], color=line_color, opacity=opacity
         ).add_to(m)
 
     return m
@@ -60,11 +76,11 @@ def save_map(m: folium.Map, path: str) -> None:
 
 
 def add_SA_process(m, frames, keep_every=1):
-    frames = frames[::keep_every]  
+    frames = frames[::keep_every]
     if not frames:
         raise ValueError("frames is empty")
 
-    t0 = datetime(2020, 1, 1)  
+    t0 = datetime(2020, 1, 1)
     features = []
 
     for i, pts_latlng in enumerate(frames):
@@ -77,7 +93,7 @@ def add_SA_process(m, frames, keep_every=1):
                 "geometry": {"type": "LineString", "coordinates": coords_lonlat},
                 "properties": {
                     "times": [t] * len(coords_lonlat),
-                    "style": {"weight": 3, "color": "red"},
+                    "style": {"weight": 3, "color": "#fc4103"},
                 },
             }
         )

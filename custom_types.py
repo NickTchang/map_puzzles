@@ -13,14 +13,24 @@ Edge_set = Set[Tuple[str, str]]
 
 @dataclass(frozen=True)
 class InstanceProperty:
+    # coordinates of the cities in the instance
     coords: Coords
-    diff_edges: int
+    # sum of the total population
     pop_sum: float
+    # optimal tour
     opt_tour: Tour
-    nn_graph: Edge_set
+    # length of the optimal tour
     opt_len: float
+    # length of the second shortes tour
     second_len: float
+    # set of edges for each node to it's nearest node
+    nn_graph: Edge_set
+    # edges that are not in the NN graph
+    diff_edges: float
+    # the convex hull
     convex_hull: Tour
+    # shotest edge in the graph
+    min_dist: float
 
 
 def better(a: InstanceProperty, b: InstanceProperty) -> bool:

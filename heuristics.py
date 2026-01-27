@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from math import inf
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 
 from .custom_types import Coords, Edge_set, Tour, _euclidean_degrees
 
@@ -43,13 +43,14 @@ def diff_edges_count_tours(opt_tour: Sequence[str], heur_tour: Sequence[str]) ->
 
 def diff_edges_count_tour_edgeset(opt_tour: Sequence[str], heur_graph: Edge_set) -> int:
     """
-    number of different edges in two tours
+    number of different edges between a tour and a graph
     """
     e_opt = tour_edges_undirected(opt_tour)
     return len(e_opt - heur_graph)
 
 
-def nearest_neighbor_graph(coords: Coords) -> Edge_set:
+def nearest_neighbor_graph(coords: Coords) -> Tuple[Edge_set, float]:
+    min_dist: float = inf
     nn_graph: Edge_set = set()
     cities = list(coords.keys())
     for c in cities:
@@ -62,9 +63,11 @@ def nearest_neighbor_graph(coords: Coords) -> Edge_set:
             if _dist < closest_nbr_dist:
                 closest_nbr_dist = _dist
                 closest_nbr = n
+            if _dist < min_dist:
+                min_dist = _dist
         if closest_nbr is not None:
             nn_graph.add((c, closest_nbr) if c < closest_nbr else (closest_nbr, c))
-    return nn_graph
+    return nn_graph, min_dist
 
 
 def nearest_neighbor_tour(coords: Coords, start: str) -> Tour:

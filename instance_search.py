@@ -2,20 +2,14 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from scipy.spatial import ConvexHull
 
-from .custom_types import (
-    Coords,
-    InstanceProperty,
-    _euclidean_degrees,
-    better,
-    print_progress,
-)
-from .db import to_coords
+from .custom_types import Coords, InstanceProperty, _euclidean_degrees, print_progress
+from .db import to_coords, to_coords_projected
 from .heuristics import (
     diff_edges_count_tour_edgeset,
     nearest_neighbor_graph,
@@ -32,26 +26,26 @@ def _population_sum(df: pd.DataFrame) -> float:
     )
 
 
-def evaluate_instance(
-    instance_df: pd.DataFrame,
-) -> InstanceProperty:
+def evaluate_instance(instance_df: pd.DataFrame) -> InstanceProperty:
     coords: Coords = to_coords(instance_df)
+    coords_projeted: Coords = to_coords_projected(instance_df)
 
     # opt_tour = solve_tsp_gurobi(coords)
-    opt_tour, opt_len, _, second_len = solve_tsp_gurobi_best_and_second_best(coords)
+    opt_tour, opt_len, _, second_len = solve_tsp_gurobi_best_and_second_best(
+        coords_projeted
+    )
 
-    nn_graph, min_dist = nearest_neighbor_graph(coords)
+    nn_graph, min_dist = nearest_neighbor_graph(coords_projeted)
 
     diff_edges = diff_edges_count_tour_edgeset(opt_tour, nn_graph)
     pop_sum = _population_sum(instance_df)
 
-    opt_len = tour_length(coords, opt_tour)
+    opt_len = tour_length(coords_projeted, opt_tour)
 
-    _city_names = list(coords.keys())
-    _coords = np.array([coords[name] for name in _city_names])
+    _city_names = list(coords_projeted.keys())
+    _coords = np.array([coords_projeted[name] for name in _city_names])
 
     hull = ConvexHull(_coords)
-
     hull_names = [_city_names[i] for i in hull.vertices]
 
     return InstanceProperty(
@@ -80,8 +74,8 @@ def search_best_instance(
     opt_diff_weight: float = 1.0,
     convex_hull_weight: float = 1.0,
     seed: int = 0,
-    record: bool = False,
-    frames: List = [],
+    frames: Optional[List] = None,
+    trace: Optional[List[Dict[str, float]]] = None,
 ) -> Tuple[pd.DataFrame, InstanceProperty]:
     """
     simulated annealing over a candidate pool by swapping cities
@@ -102,9 +96,9 @@ def search_best_instance(
         cache[key] = ev
         return ev
 
-    def scalar_score(ip: InstanceProperty) -> float:
+    def weighted_sum_obj_fnc(ip: InstanceProperty) -> float:
         pop_norm = ip.pop_sum / pop_ref
-        opt_diff = ip.second_len / ip.opt_len
+        opt_diff = min(1, (ip.second_len - ip.opt_len) / ip.opt_len)
         convex_hull_ratio = 1 - (len(ip.convex_hull) / len(ip.coords))
         diff_edge_ratio = ip.diff_edges / len(ip.opt_tour)
         return (
@@ -113,6 +107,22 @@ def search_best_instance(
             + (opt_diff_weight * opt_diff)
             + (convex_hull_weight * convex_hull_ratio)
         )  # * min(1.0, max(0.0, ip.min_dist / min_dist))
+
+    def score_terms(ip: InstanceProperty) -> Dict[str, float]:
+        pop_norm = ip.pop_sum / pop_ref
+        opt_diff = min(1, (ip.second_len - ip.opt_len) / ip.opt_len)
+        convex_hull_ratio = 1 - (len(ip.convex_hull) / len(ip.coords))
+        diff_edge_ratio = ip.diff_edges / len(ip.opt_tour)
+        terms = {
+            "nn_diff_term": nn_diff_weight * diff_edge_ratio,
+            "pop_term": pop_weight * pop_norm,
+            "opt_diff_term": opt_diff_weight * opt_diff,
+            "convex_hull_term": convex_hull_weight * convex_hull_ratio,
+        }
+        terms["total"] = float(
+            sum(terms.values())
+        )  # * min(1.0, max(0.0, ip.min_dist / min_dist))
+        return terms
 
     if n <= 2:
         raise ValueError("n must be >= 3 for a tour")
@@ -126,15 +136,15 @@ def search_best_instance(
 
     pool = (
         df_all.copy()
-        .assign(
-            pop_num=pd.to_numeric(df_all["population"], errors="coerce").fillna(0.0)
-        )
-        .sort_values("pop_num", ascending=False)
+        # .assign(
+        #     pop_num=pd.to_numeric(df_all["population"], errors="coerce").fillna(0.0)
+        # )
+        # .sort_values("pop_num", ascending=False)
         # .head(pool_size)
-        .drop(columns=["pop_num"])
-        .reset_index(drop=True)
+        # .drop(columns=["pop_num"])
+        # .reset_index(drop=True)
     )
-    pool_coords = to_coords(pool)
+    pool_coords_projected = to_coords_projected(pool)
 
     if len(pool) < n:
         raise ValueError(f"pool_size={pool_size}, but df only has {len(pool)} rows.")
@@ -144,11 +154,14 @@ def search_best_instance(
     # caching to save recomputing the same instance property
     cache: Dict[Tuple[str, ...], InstanceProperty] = {}
 
-    # Start from the population-best subset
+    # Start from a random sample
+    # current_df = pool.sample(n, random_state=1).copy()
     current_df = pool.head(n).copy()
     current_property = get_subsetproperty(current_df)
+
     best_df = current_df.copy()
     best_property = current_property
+    best_score = 0
 
     current_set = set(current_df["city"].astype(str).tolist())
     pool_cities = pool["city"].tolist()
@@ -163,19 +176,28 @@ def search_best_instance(
         t = k / max(1, iters - 1)
         T = T0 * ((T1 / T0) ** t)
 
+        skipped_this_iter = False
+        accepted_this_iter = False
+
         out_city = rng.choice(tuple(current_set))
-        others = current_set - {out_city}
         valid_choices = list(set(pool_cities) - current_set)
+
+        others = current_set - {out_city}
         valid_choices = [
             c
             for c in valid_choices
-            if min(_euclidean_degrees(pool_coords[c], pool_coords[o]) for o in others)
+            if min(
+                _euclidean_degrees(pool_coords_projected[c], pool_coords_projected[o])
+                for o in others
+            )
             >= min_dist
         ]
 
         if not valid_choices:
             skipped_iter += 1
+            skipped_this_iter = True
             continue
+
         in_city = rng.choice(valid_choices)
 
         candidate_set = set(current_set)
@@ -187,36 +209,55 @@ def search_best_instance(
         try:
             candidate_property = get_subsetproperty(proposal)
         except Exception:
+            skipped_this_iter = True
             continue
 
-        if candidate_property.diff_edges < min_diff_edges:
-            continue
+        # if candidate_property.diff_edges < min_diff_edges:
+        #     skipped_this_iter = True
+        #     continue
 
-        cur_s = scalar_score(current_property)
-        new_s = scalar_score(candidate_property)
+        current_score = score_terms(current_property)["total"]
+        new_score = score_terms(candidate_property)["total"]
 
         accept = False
-        if new_s >= cur_s:
+        if new_score >= current_score:
             accept = True
         else:
-            # annealing
-            delta = new_s - cur_s
+            delta = new_score - current_score
             accept = rng.random() < math.exp(delta / max(T, 1e-9))
 
         if accept:
+            accepted_this_iter = True
             current_df = proposal
             current_property = candidate_property
             current_set = candidate_set
 
-            if record:
+            # visualization
+            if frames is not None:
                 tour = current_property.opt_tour
                 coords = current_property.coords
                 pts = [list(coords[c]) for c in tour] + [list(coords[tour[0]])]
                 frames.append(pts)
 
-            if better(current_property, best_property):
+            # if better(current_property, best_property):
+            #     best_df = current_df.copy()
+            #     best_property = current_property
+
+            if current_score > best_score:
                 best_df = current_df.copy()
                 best_property = current_property
+                best_score = current_score
+
+        # visualization
+        if trace is not None:
+            row = {
+                "iter": k,
+                "T": float(T),
+                "accepted": int(accepted_this_iter),
+                "skipped": int(skipped_this_iter),
+            }
+            row.update(score_terms(current_property))
+            trace.append(row)
 
         # print progress:
         print_progress("Simulated annealing interations: ", k, iters)

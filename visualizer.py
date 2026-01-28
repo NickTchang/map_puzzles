@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List
 
 import folium
+import matplotlib.pyplot as plt
+import pandas as pd
 from folium.plugins import TimestampedGeoJson
 
 from .custom_types import Coords, Edge_set, Tour
@@ -20,7 +24,7 @@ def add_tour(
 
     folium.PolyLine(points, color=line_color, opacity=opacity).add_to(m)
 
-    for lon, lat in points[:-1]:
+    for lat, lon in points[:-1]:
         folium.CircleMarker(
             location=[lat, lon],
             radius=7,
@@ -110,3 +114,51 @@ def add_SA_process(m, frames, keep_every=1):
         time_slider_drag_update=True,
     ).add_to(m)
     return m
+
+
+def save_sa_objective_trace_plot(
+    trace: List[Dict[str, float]],
+    out_path: str,
+    *,
+    title: str = "Simulated annealing objective trace",
+) -> None:
+    """Save a single file containing one plot per objective addend (plus total)."""
+    if not trace:
+        return
+
+    df = pd.DataFrame(trace).sort_values("iter")
+
+    series = [
+        ("nn_diff_term", "NN diff ratio"),
+        ("pop_term", "Population ratio"),
+        ("opt_diff_term", "OPT gap ratio"),
+        ("convex_hull_term", "Convex hull ratio"),
+        ("total", "Total score"),
+        # ("accepted", "Accepted candidates"),
+        # ("skipped", "Skipped candidates"),
+    ]
+    series = [(c, label) for c, label in series if c in df.columns]
+    nrows = len(series)
+
+    fig, axes = plt.subplots(
+        nrows=nrows,
+        ncols=1,
+        figsize=(12, max(2.0, 2.0 * nrows)),
+        sharex=True,
+        constrained_layout=True,
+    )
+    if nrows == 1:
+        axes = [axes]
+
+    x = df["iter"].to_numpy()
+    for ax, (col, label) in zip(axes, series):
+        ax.plot(x, df[col].to_numpy())
+        ax.set_ylabel(label)
+        ax.grid(True, alpha=0.25)
+
+    axes[-1].set_xlabel("Iteration")
+    fig.suptitle(title)
+
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)

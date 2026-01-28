@@ -49,17 +49,17 @@ def diff_edges_count_tour_edgeset(opt_tour: Sequence[str], heur_graph: Edge_set)
     return len(e_opt - heur_graph)
 
 
-def nearest_neighbor_graph(coords: Coords) -> Tuple[Edge_set, float]:
+def nearest_neighbor_graph(coords_projected: Coords) -> Tuple[Edge_set, float]:
     min_dist: float = inf
     nn_graph: Edge_set = set()
-    cities = list(coords.keys())
+    cities = list(coords_projected.keys())
     for c in cities:
         neighbors = cities.copy()
         neighbors.remove(c)
         closest_nbr = None
         closest_nbr_dist = inf
         for n in neighbors:
-            _dist = _euclidean_degrees(coords[c], coords[n])
+            _dist = _euclidean_degrees(coords_projected[c], coords_projected[n])
             if _dist < closest_nbr_dist:
                 closest_nbr_dist = _dist
                 closest_nbr = n

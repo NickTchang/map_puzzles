@@ -9,9 +9,11 @@ from gurobipy import GRB
 from .custom_types import Coords, Tour, _euclidean_degrees
 
 
-def _build_distances(cities: List[str], coords: Coords) -> Dict[Tuple[str, str], float]:
+def _build_distances(
+    cities: List[str], coords_projected: Coords
+) -> Dict[Tuple[str, str], float]:
     return {
-        (i, j): _euclidean_degrees(coords[i], coords[j])
+        (i, j): _euclidean_degrees(coords_projected[i], coords_projected[j])
         for i, j in combinations(cities, 2)
     }
 
@@ -117,11 +119,11 @@ def solve_tsp_gurobi(
 
 
 def solve_tsp_gurobi_best_and_second_best(
-    coords: Coords,
+    coords_projected: Coords,
 ) -> Tuple[Tour, float, Tour, float]:
     strict_obj_tol: float = 1e-6
-    cities = list(coords.keys())
-    dist_undirected = _build_distances(cities, coords)
+    cities = list(coords_projected.keys())
+    dist_undirected = _build_distances(cities, coords_projected)
 
     with gp.Env(empty=True) as env:
         env.setParam("OutputFlag", 0)

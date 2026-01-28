@@ -46,7 +46,9 @@ def better(a: InstanceProperty, b: InstanceProperty) -> bool:
     return a.pop_sum > b.pop_sum
 
 
-def _euclidean_degrees(a: Tuple[float, float], b: Tuple[float, float]) -> float:
+def _euclidean_degrees_projected(
+    a: Tuple[float, float], b: Tuple[float, float]
+) -> float:
     """
     Takes in lonlat of two points and return their distance in km
     projects from EPSG:4326 to EPSG:3857
@@ -54,6 +56,13 @@ def _euclidean_degrees(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     ax, ay = t.transform(a[0], a[1])
     bx, by = t.transform(b[0], b[1])
     return math.hypot(ax - bx, ay - by) / 1000
+
+
+def _euclidean_degrees(a: Tuple[float, float], b: Tuple[float, float]) -> float:
+    """
+    Takes in easting and northing of two points and return their distance in km
+    """
+    return math.hypot(a[0] - b[0], a[1] - b[1]) / 1000
 
 
 def print_progress(prefix: str, curr: int, end: int) -> None:

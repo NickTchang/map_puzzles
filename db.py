@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import Final
 
 import pandas as pd
+from pyproj import Transformer
 
 from .custom_types import Coords
 
 DEFAULT_URL: Final[str] = "https://simplemaps.com/static/data/country-cities/de/de.csv"
+
 
 DEFAULT_GEONAMES_ZIP: Final[Path] = Path(__file__).resolve().parent / "cities5000.zip"
 # DEFAULT_GEONAMES_ZIP_500: Final[Path] = Path(__file__).resolve().parent / "cities500.zip"
@@ -34,6 +36,8 @@ GEONAMES_COLUMNS: Final[list[str]] = [
     "timezone",
     "modification_date",
 ]
+
+t = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
 
 
 def load_cities_all(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
@@ -121,5 +125,17 @@ def to_coords(df: pd.DataFrame) -> Coords:
         index=False, name=None
     ):
         coords[str(city)] = (float(lon), float(lat))
+
+    return coords
+
+
+def to_coords_projected(df: pd.DataFrame) -> Coords:
+    coords: Coords = {}
+
+    for city, lat, lon in df.loc[:, ["city", "latitude", "longitude"]].itertuples(
+        index=False, name=None
+    ):
+        x, y = t.transform(lon, lat)
+        coords[str(city)] = (float(x), float(y))
 
     return coords

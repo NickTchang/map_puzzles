@@ -6,15 +6,21 @@ import time
 from datetime import datetime
 
 from .custom_types import save_args
-from .db import load_cities_de, to_coords
+from .db import load_cities_de, to_coords, to_coords_projected
 from .heuristics import (
     diff_edges_count_tour_edgeset,
     nearest_neighbor_graph,
-    tour_length,
 )
 from .instance_search import search_best_instance
-from .solver import solve_tsp_gurobi
-from .visualizer import add_edges, add_SA_process, add_tour, build_map, save_map
+from .solver import solve_tsp_gurobi_best_and_second_best
+from .visualizer import (
+    add_edges,
+    add_SA_process,
+    add_tour,
+    build_map,
+    save_map,
+    save_sa_objective_trace_plot,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,10 +50,10 @@ def parse_args() -> argparse.Namespace:
         help="Number of iterations for the simulated annealing",
     )
     p.add_argument(
-        "--min-diff-edges",
-        type=int,
-        default=0,
-        help="Minimum number of edges different to Nearest-Neighbor heuristic",
+        "--nn-diff-weight",
+        type=float,
+        default=1.0,
+        help="Weight for the difference to Nearest-Neighbor heuristic",
     )
     p.add_argument(
         "--n",
@@ -90,27 +96,30 @@ def main() -> None:
 
     df = load_cities_de()
 
-    frames = []
+    if args.record:
+        frames = []
+        trace = []
+
     chosen, _ = search_best_instance(
         df,
         n=args.n,
         min_dist=args.min_dist,
         pool_size=args.pool_size,
         iters=args.iters,
-        min_diff_edges=args.min_diff_edges,
         seed=args.seed,
         pop_weight=args.pop_weight,
+        nn_diff_weight=args.nn_diff_weight,
         frames=frames,
-        record=args.record,
+        trace=trace,
     )
 
+    coords_projected = to_coords_projected(chosen)
     coords = to_coords(chosen)
-    opt_tour = solve_tsp_gurobi(coords)
-    nn_graph, _ = nearest_neighbor_graph(coords)
+    opt_tour, opt_len, _, _ = solve_tsp_gurobi_best_and_second_best(coords_projected)
+    nn_graph, _ = nearest_neighbor_graph(coords_projected)
 
     diff_edges = diff_edges_count_tour_edgeset(opt_tour, nn_graph)
     shared_edges = len(opt_tour) - diff_edges
-    opt_len = tour_length(coords, opt_tour)
 
     pop_sum = float(
         __import__("pandas")
@@ -171,6 +180,12 @@ def main() -> None:
         save_map(
             record_m,
             file_path + "_record" + ".html",
+        )
+    if args.record:
+        save_sa_objective_trace_plot(
+            trace,
+            file_path + "_sa_trace.pdf",
+            title=f"SA objective trace (n={args.n}, iters={args.iters})",
         )
 
 

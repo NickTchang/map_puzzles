@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from datetime import datetime
 
+from .custom_types import save_args
 from .db import load_cities_de, to_coords
 from .heuristics import (
     diff_edges_count_tour_edgeset,
@@ -22,6 +24,12 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="tsp_map",
         help="Output file name without file extention, default = tsp_map",
+    )
+    p.add_argument(
+        "--out-path",
+        type=str,
+        default="map_puzzle_build/",
+        help="folder path at which to save the generated instance, default = map_puzzle_build",
     )
     p.add_argument(
         "--pool-size",
@@ -56,8 +64,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--min-dist",
         type=float,
-        default=1.0,
-        help="Minimum distance between cities( not a hard coded requirement )",
+        default=50.0,
+        help="Minimum distance between cities in kilometers",
     )
     p.add_argument(
         "--seed", type=int, default=0, help="Seed for the random number generator"
@@ -86,7 +94,7 @@ def main() -> None:
     chosen, _ = search_best_instance(
         df,
         n=args.n,
-        min_dist=1,
+        min_dist=args.min_dist,
         pool_size=args.pool_size,
         iters=args.iters,
         min_diff_edges=args.min_diff_edges,
@@ -127,25 +135,42 @@ def main() -> None:
 
     # save all the stuff
     current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    save_map(m, args.out + "_n" + str(args.n) + "_" + current_datetime + ".html")
+    file_path = (
+        args.out_path
+        + args.out
+        + "_n"
+        + str(args.n)
+        + "_"
+        + current_datetime
+        + "/"
+        + "n"
+        + str(args.n)
+        + "_"
+        + current_datetime
+    )
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    save_map(
+        m,
+        file_path + ".html",
+    )
     chosen.to_csv(
-        args.out + "_n" + str(args.n) + "_" + current_datetime + ".csv", index=False
+        file_path + ".csv",
+        index=False,
+    )
+
+    # parameter logs
+    save_args(
+        args,
+        file_path + ".txt",
     )
 
     if args.record:
         record_m = build_map(opt_tour, coords)
         add_SA_process(record_m, frames, 1)
         # save all the stuff
-        current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         save_map(
             record_m,
-            "record_"
-            + args.out
-            + "_n"
-            + str(args.n)
-            + "_"
-            + current_datetime
-            + ".html",
+            file_path + "_record" + ".html",
         )
 
 

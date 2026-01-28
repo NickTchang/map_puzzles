@@ -15,14 +15,14 @@ def add_tour(
     line_color: str = "#fc4103",
     opacity: float = 1,
 ) -> folium.Map:
-    points = [coords[city] for city in tour]
+    points = [(coords[city][1], coords[city][0]) for city in tour]
     points.append(points[0])
 
     folium.PolyLine(points, color=line_color, opacity=opacity).add_to(m)
 
-    for lat, lng in points[:-1]:
+    for lon, lat in points[:-1]:
         folium.CircleMarker(
-            location=[lat, lng],
+            location=[lat, lon],
             radius=7,
             fill=True,
             stroke=False,
@@ -43,7 +43,9 @@ def add_edges(
     edges_tuple = tuple(edges)
     for a, b in edges_tuple:
         folium.PolyLine(
-            [coords[a], coords[b]], color=line_color, opacity=opacity
+            [(coords[a][1], coords[a][0]), (coords[b][1], coords[b][0])],
+            color=line_color,
+            opacity=opacity,
         ).add_to(m)
 
     return m
@@ -55,18 +57,18 @@ def build_map(
     zoom_start: int = 4,
 ) -> folium.Map:
     center_lat = 0
-    center_lng = 0
+    center_lon = 0
 
     points = [coords[city] for city in tour]
 
-    for lat, lng in points:
+    for lon, lat in points:
+        center_lon += lon
         center_lat += lat
-        center_lng += lng
 
     center_lat = center_lat / len(tour)
-    center_lng = center_lng / len(tour)
+    center_lon = center_lon / len(tour)
 
-    m = folium.Map(location=[center_lat, center_lng], zoom_start=zoom_start)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=zoom_start)
 
     return m
 
@@ -83,8 +85,8 @@ def add_SA_process(m, frames, keep_every=1):
     t0 = datetime(2020, 1, 1)
     features = []
 
-    for i, pts_latlng in enumerate(frames):
-        coords_lonlat = [[lng, lat] for lat, lng in pts_latlng]
+    for i, pts_lonlat in enumerate(frames):
+        coords_lonlat = [[lon, lat] for lon, lat in pts_lonlat]
         t = (t0 + timedelta(seconds=i)).isoformat()
 
         features.append(

@@ -61,8 +61,8 @@ def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
     Load all german cities
     Returns a DataFrame with columns:
       city (str)
+      lon (float)
       lat (float)
-      lng (float)
       population (int/float)
     """
     path = Path(path)
@@ -83,27 +83,29 @@ def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
         (df["country_code"] == "DE")
         & (df["feature_class"] == "P")
         & (df["feature_code"] != "PPLX"),
-        ["name", "latitude", "longitude", "population"],
+        ["name", "longitude", "latitude", "population"],
     ].copy()
 
     df = df.rename(
         columns={
             "name": "city",
-            "latitude": "lat",
-            "longitude": "lng",
         }
     )
 
     df["city"] = df["city"].astype(str).str.strip()
 
-    df["lat"] = pd.to_numeric(df["lat"].astype(str).str.strip(), errors="coerce")
-    df["lng"] = pd.to_numeric(df["lng"].astype(str).str.strip(), errors="coerce")
+    df["latitude"] = pd.to_numeric(
+        df["latitude"].astype(str).str.strip(), errors="coerce"
+    )
+    df["longitude"] = pd.to_numeric(
+        df["longitude"].astype(str).str.strip(), errors="coerce"
+    )
     df["population"] = pd.to_numeric(
         df["population"].astype(str).str.strip(), errors="coerce"
     ).fillna(0)
 
     # remove invalide rows
-    df = df.dropna(subset=["lat", "lng"])
+    df = df.dropna(subset=["latitude", "longitude"])
     df = df.loc[df["city"] != ""].copy()
 
     # places with same name and less population are removed
@@ -115,9 +117,9 @@ def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
 def to_coords(df: pd.DataFrame) -> Coords:
     coords: Coords = {}
 
-    for city, lat, lng in df.loc[:, ["city", "lat", "lng"]].itertuples(
+    for city, lat, lon in df.loc[:, ["city", "latitude", "longitude"]].itertuples(
         index=False, name=None
     ):
-        coords[str(city)] = (float(lat), float(lng))
+        coords[str(city)] = (float(lon), float(lat))
 
     return coords

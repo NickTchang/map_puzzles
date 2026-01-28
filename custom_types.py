@@ -4,11 +4,15 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List, Set, Tuple
 
-# (lat, lng)
+from pyproj import Transformer
+
+# (lon, lat)
 Coord = Tuple[float, float]
 Coords = Dict[str, Coord]
 Tour = List[str]
 Edge_set = Set[Tuple[str, str]]
+
+t = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
 
 
 @dataclass(frozen=True)
@@ -43,7 +47,13 @@ def better(a: InstanceProperty, b: InstanceProperty) -> bool:
 
 
 def _euclidean_degrees(a: Tuple[float, float], b: Tuple[float, float]) -> float:
-    return math.hypot(a[0] - b[0], a[1] - b[1])
+    """
+    Takes in lonlat of two points and return their distance in km
+    projects from EPSG:4326 to EPSG:3857
+    """
+    ax, ay = t.transform(a[0], a[1])
+    bx, by = t.transform(b[0], b[1])
+    return math.hypot(ax - bx, ay - by) / 1000
 
 
 def print_progress(prefix: str, curr: int, end: int) -> None:
@@ -54,3 +64,9 @@ def print_progress(prefix: str, curr: int, end: int) -> None:
     LINE_CLEAR = "\x1b[2K"
     print(prefix + str(curr) + " out of " + str(end))
     print(LINE_UP, end=LINE_CLEAR)
+
+
+def save_args(args, path="args.txt"):
+    with open(path, "w", encoding="utf-8") as f:
+        for k, v in sorted(vars(args).items()):
+            f.write(f"{k}={v!r}\n")

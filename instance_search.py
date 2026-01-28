@@ -154,6 +154,8 @@ def search_best_instance(
     pool_cities = pool["city"].tolist()
     pool_indexed = pool.set_index("city", drop=False)
 
+    # debug
+    skipped_iter = 0
     T0 = 1.0
     T1 = 0.01
 
@@ -172,6 +174,7 @@ def search_best_instance(
         ]
 
         if not valid_choices:
+            skipped_iter += 1
             continue
         in_city = rng.choice(valid_choices)
 
@@ -217,4 +220,5 @@ def search_best_instance(
 
         # print progress:
         print_progress("Simulated annealing interations: ", k, iters)
+    print("iteration skipped: " + str(skipped_iter))
     return best_df, best_property

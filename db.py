@@ -60,7 +60,7 @@ def load_cities_all(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
+def load_cities_country(path: str | Path = DEFAULT_GEONAMES_ZIP, country_code: str = "DE") -> pd.DataFrame:
     """
     Load all german cities
     Returns a DataFrame with columns:
@@ -84,7 +84,7 @@ def load_cities_de(path: str | Path = DEFAULT_GEONAMES_ZIP) -> pd.DataFrame:
 
     # filter for germany
     df = df.loc[
-        (df["country_code"] == "DE")
+        (df["country_code"] == country_code)
         & (df["feature_class"] == "P")
         & (df["feature_code"] != "PPLX"),
         ["name", "longitude", "latitude", "population"],

@@ -1,11 +1,27 @@
 from . import db
+import argparse
 
 
-def print_de_cities() -> None:
-    df = db.load_cities_de()
+def print_country_cities(n:int = 10, country_code:str = "DE") -> None:
+    df = db.load_cities_country(country_code=country_code)
     df.sort_values(by=["population"], ascending=False)
-    print(df.head(30))
+    print(df.head(n))
 
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser()
+    p.add_argument(
+        "--country",
+        type=str,
+        default="DE",
+        help="Country code",
+    )
+    p.add_argument(
+        "--n",
+        type=int,
+        default=10,
+        help="Number of cities",
+    )
+    return p.parse_args()
 
 def print_full_attributes() -> None:
     df = db.load_cities_all()
@@ -42,5 +58,6 @@ def test_solver() -> None:
 
 
 if __name__ == "__main__":
-    # print_de_cities()
-    print_full_attributes()
+    args = parse_args()
+    print_country_cities(n = args.n, country_code=args.country)
+    # print_full_attributes()

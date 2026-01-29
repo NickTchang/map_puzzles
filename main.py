@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 from .custom_types import save_args
-from .db import load_cities_de, to_coords, to_coords_projected
+from .db import load_cities_country, to_coords, to_coords_projected
 from .heuristics import (
     diff_edges_count_tour_edgeset,
     nearest_neighbor_graph,
@@ -83,6 +83,12 @@ def parse_args() -> argparse.Namespace:
         help="csv file name as CSV(cities/coords/population) ",
     )
     p.add_argument(
+        "--country",
+        type=str,
+        default="DE",
+        help="Country code",
+    )
+    p.add_argument(
         "--record",
         action="store_true",
         default=False,
@@ -94,7 +100,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    df = load_cities_de()
+    df = load_cities_country(country_code=args.country)
 
     if args.record:
         frames = []

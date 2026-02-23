@@ -94,6 +94,18 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Display each of the simulated annealing step",
     )
+        p.add_argument(
+        "--opt_diff_weight",
+        type=float,
+        default=1.0,
+        help="Weight for the difference to optimal solution",
+    )
+        p.add_argument(
+        "--convex_hull_weight",
+        type=float,
+        default=1.0,
+        help="Weight for the convex hull constraint",
+    )
     return p.parse_args()
 
 
@@ -115,8 +127,10 @@ def main() -> None:
         seed=args.seed,
         pop_weight=args.pop_weight,
         nn_diff_weight=args.nn_diff_weight,
+        opt_diff_weight=args.opt_diff_weight,
+        convex_hull_weight=args.convex_hull_weight,
         frames=frames,
-        trace=trace,
+        trace=trace
     )
 
     coords_projected = to_coords_projected(chosen)

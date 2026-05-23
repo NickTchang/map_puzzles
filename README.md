@@ -8,6 +8,7 @@ A Python command line tool for generating **Travelling Salesman Problem (TSP) pu
 - Gurobi (requires a valid license)
 - Dependencies listed in `requirements.txt`
 - (recommend using a virtual environment)
+
 Install dependencies:
 
 ```bash

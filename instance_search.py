@@ -79,13 +79,6 @@ def search_best_instance(
 ) -> Tuple[pd.DataFrame, InstanceProperty]:
     """
     simulated annealing over a candidate pool by swapping cities
-    maximizes the following (priority in order):
-      1) number of different edges between opt and nn tours
-      2) population sum
-      2) difference between OPT and second best solution
-
-    use a scalar score for probabilistic acceptance:
-        score = diff_edges + pop_weight * (pop_sum / pop_ref)
     """
 
     def get_subsetproperty(df: pd.DataFrame) -> InstanceProperty:
@@ -96,21 +89,9 @@ def search_best_instance(
         cache[key] = ev
         return ev
 
-    def weighted_sum_obj_fnc(ip: InstanceProperty) -> float:
-        pop_norm = ip.pop_sum / pop_ref
-        opt_diff = min(1, (ip.second_len - ip.opt_len) / ip.opt_len)
-        convex_hull_ratio = 1 - (len(ip.convex_hull) / len(ip.coords))
-        diff_edge_ratio = ip.diff_edges / len(ip.opt_tour)
-        return (
-            (nn_diff_weight * diff_edge_ratio)
-            + (pop_weight * pop_norm)
-            + (opt_diff_weight * opt_diff)
-            + (convex_hull_weight * convex_hull_ratio)
-        )  # * min(1.0, max(0.0, ip.min_dist / min_dist))
-
     def score_terms(ip: InstanceProperty) -> Dict[str, float]:
         pop_norm = ip.pop_sum / pop_ref
-        opt_diff = min(1, (ip.second_len - ip.opt_len) / ip.opt_len)
+        opt_diff = (ip.second_len - ip.opt_len) / (ip.opt_len * 0.05)
         convex_hull_ratio = 1 - (len(ip.convex_hull) / len(ip.coords))
         diff_edge_ratio = ip.diff_edges / len(ip.opt_tour)
         terms = {
@@ -132,7 +113,7 @@ def search_best_instance(
             f"pool_size={pool_size} n={n}, pool_size must be larger than n"
         )
 
-    rng = random.Random(seed)
+    rng = np.random.default_rng(seed)
 
     pool = (
         df_all.copy()
@@ -169,6 +150,7 @@ def search_best_instance(
 
     # debug
     skipped_iter = 0
+    # annealing
     T0 = 1.0
     T1 = 0.01
 
@@ -197,8 +179,9 @@ def search_best_instance(
             skipped_iter += 1
             skipped_this_iter = True
             continue
-
-        in_city = rng.choice(valid_choices)
+        #chose a random city from the valid choices based on the population, so that more populated cities are more likely to be chosen
+        pop_preference_weights = np.array([pool_indexed.loc[c]["population"] for c in valid_choices])
+        in_city = rng.choice(valid_choices, p=pop_preference_weights / pop_preference_weights.sum())
 
         candidate_set = set(current_set)
         candidate_set.remove(out_city)

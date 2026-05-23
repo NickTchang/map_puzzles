@@ -40,6 +40,7 @@ def add_tour(
 def add_edges(
     m: folium.Map,
     edges: Edge_set,
+    tour: Tour,
     coords: Coords,
     line_color: str = "#1f77b4",
     opacity: float = 0.6,
@@ -50,6 +51,18 @@ def add_edges(
             [(coords[a][1], coords[a][0]), (coords[b][1], coords[b][0])],
             color=line_color,
             opacity=opacity,
+        ).add_to(m)
+
+    points = [(coords[city][1], coords[city][0]) for city in tour]
+    points.append(points[0])
+    for lat, lon in points[:-1]:
+        folium.CircleMarker(
+            location=[lat, lon],
+            radius=7,
+            fill=True,
+            stroke=False,
+            color=line_color,
+            fill_opacity=opacity,
         ).add_to(m)
 
     return m

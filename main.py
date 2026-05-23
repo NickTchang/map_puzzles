@@ -94,13 +94,13 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Display each of the simulated annealing step",
     )
-        p.add_argument(
+    p.add_argument(
         "--opt_diff_weight",
         type=float,
         default=1.0,
         help="Weight for the difference to optimal solution",
     )
-        p.add_argument(
+    p.add_argument(
         "--convex_hull_weight",
         type=float,
         default=1.0,
@@ -156,10 +156,9 @@ def main() -> None:
     #     print(i)
 
     m = build_map(opt_tour, coords)
-    # nn tour
-    # add_tour(m, nn_graph, coords, line_color="#1f77b4", opacity=0.6)
+    # nn graph
+    # add_edges(m, nn_graph, coords, opacity=0.6)
     # opt tour
-    add_edges(m, nn_graph, coords, opacity=0.6)
     add_tour(m, opt_tour, coords, line_color="#fc4103", opacity=1)
 
     # save all the stuff
@@ -185,6 +184,14 @@ def main() -> None:
     chosen.to_csv(
         file_path + ".csv",
         index=False,
+    )
+
+    #save nn graph
+    m_nn = build_map(opt_tour, coords)
+    add_edges(m_nn, nn_graph, opt_tour, coords, opacity=1)
+    save_map(
+        m_nn,
+        file_path + "_nn.html",
     )
 
     # parameter logs

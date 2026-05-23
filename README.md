@@ -1,8 +1,4 @@
-# cli cheatsheet
-
-py -m map_puzzles.main --n 40
-
-# map_puzzles
+# Map-Puzzle-Generator
 
 A Python command line tool for generating **Travelling Salesman Problem (TSP) puzzle instances** based on real-world city data. It selects a set of cities from a given country, finds the optimal tour using Gurobi, and renders the result as an interactive map.
 
